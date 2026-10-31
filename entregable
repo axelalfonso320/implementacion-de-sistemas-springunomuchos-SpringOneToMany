@@ -1,0 +1,18 @@
+ENTREGABLE: Spring Boot con JPA, relación uno a muchos
+
+1. ¿En qué tabla queda la llave foránea y qué propiedad de Java la controla?
+La llave foránea queda en la tabla "comentarios" (lado "muchos"), 
+en la columna producto_id, que referencia producto(id). La propiedad Comment.producto (con @ManyToOne) es el lado propietario y la controla. En Product, @OneToMany(mappedBy = "producto") es el lado inverso: solo refleja lo que se guarda en Comment.producto. Lo verifiqué en psql con \d comentarios y con SELECT id, producto_id FROM comentarios.
+
+2. ¿Cuál es la diferencia entre List y Set?
+List conserva el orden y permite elementos repetidos. Set no promete orden y no admite repetidos según equals y hashCode. Product usa Set<Comment> comentarios.
+
+3. ¿Por qué los identificadores son String y qué tipo de valor guardan?
+Porque @GeneratedValue(strategy = GenerationType.UUID) genera un UUID para cada registro, y aquí se guarda como texto (String). Por ejemplo: b738e870-161b-4fcd-a2ac-f1232f82aba2. No depende de un autoincremental y es difícil de adivinar.
+
+4. ¿Qué ocurre al eliminar un producto con comentarios? ¿Qué cambia si se quita CascadeType.ALL?
+Con CascadeType.ALL, al hacer DELETE /producto/{id} la operación REMOVE se propaga a los comentarios: se borran el producto y sus comentarios. Lo comprobé: respondió {"success":true} y GET /comentarios devolvió [].
+Sin CascadeType.ALL, JPA intenta borrar solo el producto, pero el comentario sigue apuntando a él y PostgreSQL lo rechaza por la llave foránea. Lo comprobé: el DELETE respondió error 500 (Internal Server Error).
+
+5. ¿Qué diferencia práctica hay entre los FetchType usados en Product y Comment?
+En Product, comentarios es EAGER: al cargar un producto también se cargan sus comentarios (por eso GET /productos los devuelve anidados). En Comment, producto es LAZY: el producto solo se carga cuando se accede a él. EAGER puede traer datos de más y afectar el rendimiento; LAZY evita cargas innecesarias, pero puede fallar si la sesión ya se cerró.
